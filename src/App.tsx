@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Phone, GraduationCap, ChevronLeft, ChevronRight, LogOut, Ticket, User, MapPin, Calendar, Car, Train, Bike, Plane, Shirt, RectangleVertical, Heart, Quote, MessageSquare } from 'lucide-react';
+import { Phone, GraduationCap, ChevronLeft, ChevronRight, LogOut, Ticket, User, MapPin, Calendar, Car, Train, Bike, Plane, Shirt, RectangleVertical, Heart, Quote, MessageSquare, Music } from 'lucide-react';
 import AlumniStats from './components/AlumniStats';
 import FeedbackPage from './components/FeedbackPage';
 
@@ -219,12 +219,17 @@ export default function App() {
   const [stats, setStats] = useState<{ totalRegisteredAndPaid: number; totalCheckedIn: number; percentCheckedIn: number } | null>(null);
 
   const [showFeedbackConfig, setShowFeedbackConfig] = useState<boolean>(true);
+  const [showQrLinkConfig, setShowQrLinkConfig] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'main' | 'feedback'>('main');
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [feedbackInput, setFeedbackInput] = useState('');
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [feedbackSubmitCount, setFeedbackSubmitCount] = useState<number>(0);
+
+  const [cafeImgIndex, setCafeImgIndex] = useState<number>(1);
+  const [cafePopupImg, setCafePopupImg] = useState<string | null>(null);
 
   // Fetch configs and classes on mount
   useEffect(() => {
@@ -244,6 +249,11 @@ export default function App() {
           setShowFeedbackConfig(data.SHOW_FEEDBACK === "true" || data.SHOW_FEEDBACK === "1");
         } else {
           setShowFeedbackConfig(true);
+        }
+        if (data.SHOW_QR_LINK !== undefined) {
+          setShowQrLinkConfig(data.SHOW_QR_LINK);
+        } else {
+          setShowQrLinkConfig(null);
         }
       } catch (err) {
         console.error("Failed to fetch configs", err);
@@ -417,6 +427,7 @@ export default function App() {
       if (response.ok) {
         setIsFeedbackModalOpen(false);
         setFeedbackInput('');
+        setFeedbackSubmitCount(prev => prev + 1);
         setActiveView('feedback');
       } else {
         const data = await response.json();
@@ -431,9 +442,28 @@ export default function App() {
   };
 
   // Generate QR Code Link
-  const qrValue = user 
-    ? `https://silver-reunion-90-qr-attendance-258479971315.asia-southeast1.run.app/?id=${user.id}`
-    : '';
+  const getQrValue = () => {
+    if (!user) return '';
+    let qrBase = `https://silver-reunion-90-qr-attendance-258479971315.asia-southeast1.run.app/`;
+    if (showQrLinkConfig && (showQrLinkConfig.startsWith('http://') || showQrLinkConfig.startsWith('https://'))) {
+      qrBase = showQrLinkConfig;
+    }
+
+    if (qrBase.includes('?id=')) {
+      return qrBase;
+    } else if (qrBase.includes('?')) {
+      return `${qrBase}&id=${user.id}`;
+    } else {
+      return `${qrBase}?id=${user.id}`;
+    }
+  };
+  const qrValue = getQrValue();
+
+  const shouldShowQrLink = showQrLinkConfig !== null && 
+                           showQrLinkConfig !== undefined && 
+                           showQrLinkConfig !== 'false' && 
+                           showQrLinkConfig !== '0' && 
+                           showQrLinkConfig !== '';
 
   const googleCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Silver Reunion 90 SMAN 90 Jakarta')}&details=${encodeURIComponent('Jangan lupa sob reuni silver SMAN 90 di Milestone Cafe, Bintaro!')}&location=${encodeURIComponent('Milestone Cafe Bintaro')}&dates=20260606T060000Z/20260606T090000Z`;
 
@@ -505,12 +535,17 @@ export default function App() {
           </div>
           <div className="text-right hidden md:block">
             <p className="text-xl lg:text-2xl font-black uppercase text-[#073B4C] whitespace-nowrap">6 Juni 2026 <span className="text-xs md:text-sm opacity-60">13.00 WIB</span></p>
-            <p className="text-lg font-medium opacity-80 italic">Milestone Cafe Bintaro</p>
+            <p className="text-lg font-medium opacity-80 italic">Milestone Star Cafe Bintaro</p>
           </div>
         </header>
 
         {activeView === 'feedback' && user ? (
-          <FeedbackPage user={user} onBack={() => setActiveView('main')} />
+          <FeedbackPage 
+            key={`feedback-view-${feedbackSubmitCount}`}
+            user={user} 
+            onBack={() => setActiveView('main')} 
+            onAddFeedback={() => setIsFeedbackModalOpen(true)}
+          />
         ) : (
           <>
             <main className="flex flex-col gap-8">
@@ -630,14 +665,16 @@ export default function App() {
                       </p>
                     </div>
 
-                    <div className="pt-8 border-t border-white/20 relative z-10 mt-10">
-                      <p className="text-[10px] opacity-50 uppercase tracking-[0.3em] mb-2 font-black">Link Absensi Digital Kamu</p>
-                      <div className="bg-[#118AB2]/20 p-4 rounded-xl border-2 border-white/10">
-                        <p className="text-[10px] font-mono break-all text-[#06D6A0] leading-relaxed">
-                          {qrValue}
-                        </p>
+                    {shouldShowQrLink && (
+                      <div className="pt-8 border-t border-white/20 relative z-10 mt-10">
+                        <p className="text-[10px] opacity-50 uppercase tracking-[0.3em] mb-2 font-black">Link Absensi Digital Kamu</p>
+                        <div className="bg-[#118AB2]/20 p-4 rounded-xl border-2 border-white/10">
+                          <p className="text-[10px] font-mono break-all text-[#06D6A0] leading-relaxed">
+                            {qrValue}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Right Side: QR Code & Calendar */}
@@ -746,7 +783,7 @@ export default function App() {
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
                       <MapPin className="shrink-0 text-[#EF476F]" />
-                      <p className="text-sm font-bold">Milestone Cafe Bintaro</p>
+                      <p className="text-sm font-bold">Milestone Star Cafe Bintaro</p>
                     </div>
                     <div className="flex items-start gap-3">
                       <Calendar className="shrink-0 text-[#EF476F]" />
@@ -842,30 +879,123 @@ export default function App() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="bg-[#073B4C] rounded-[40px] p-2 border-4 border-[#073B4C] shadow-[12px_12px_0px_0px_#FFD166] flex flex-col overflow-hidden min-h-[400px]"
+              className="bg-[#073B4C] rounded-[40px] p-2 border-4 border-[#073B4C] shadow-[12px_12px_0px_0px_#FFD166] flex flex-col overflow-hidden min-h-[460px]"
             >
-              <div className="p-6 text-white">
-                 <h3 className="text-xl font-black uppercase italic flex items-center gap-2">
-                  <MapPin className="text-[#06D6A0]" /> Milestone Cafe Bintaro
-                </h3>
+              {/* Top part: Image and details of venue, linking to Google Maps */}
+              <div 
+                className="bg-white rounded-[32px] p-4 m-1.5 border-4 border-[#073B4C] flex flex-col sm:flex-row gap-4 items-stretch relative"
+              >
+                {/* Left part: Interactive photo slider */}
+                <div className="w-full sm:w-1/3 h-32 rounded-2xl overflow-hidden border-2 border-[#073B4C] shrink-0 relative bg-slate-100 group select-none">
+                  {/* Image container clickable to show popup */}
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCafePopupImg(`/${cafeImgIndex}0.jpeg`);
+                    }}
+                    className="w-full h-full cursor-pointer relative"
+                  >
+                    <img 
+                      src={`/${cafeImgIndex}.jpeg`} 
+                      alt="Milestone Star Cafe Bintaro" 
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    
+                    {/* Compact layout details badge */}
+                    <div className="absolute top-2 right-2 bg-black/60 text-white font-black text-[7px] tracking-wider uppercase px-1.5 py-0.5 rounded-md pointer-events-none">
+                      🔍 Detail
+                    </div>
+
+                    {/* Image indicator count badge */}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-[#073B4C]/90 text-white font-black text-[9px] px-2 py-0.5 rounded-md border-2 border-[#073B4C] select-none pointer-events-none">
+                      {cafeImgIndex} / 5
+                    </div>
+                  </div>
+
+                  {/* Slider controls */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setCafeImgIndex(prev => prev === 1 ? 5 : prev - 1);
+                    }}
+                    className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/95 border-2 border-[#073B4C] hover:bg-[#FFD166] text-[#073B4C] flex items-center justify-center transition-all shadow-[1.5px_1.5px_0_0_#073B4C] hover:scale-105 active:translate-y-[-50%] active:translate-x-[1px] cursor-pointer"
+                  >
+                    <ChevronLeft size={14} strokeWidth={3} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setCafeImgIndex(prev => prev === 5 ? 1 : prev + 1);
+                    }}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/95 border-2 border-[#073B4C] hover:bg-[#FFD166] text-[#073B4C] flex items-center justify-center transition-all shadow-[1.5px_1.5px_0_0_#073B4C] hover:scale-105 active:translate-y-[-50%] active:translate-x-[1px] cursor-pointer"
+                  >
+                    <ChevronRight size={14} strokeWidth={3} />
+                  </button>
+                </div>
+
+                {/* Right part: Description linking to GMaps */}
+                <a 
+                  href="https://maps.app.goo.gl/NinRKSfzcdA4sCdN7" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="flex-1 flex flex-col justify-between py-0.5 group/link text-left"
+                >
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                      <span className="bg-[#EF476F]/10 text-[#EF476F] font-black text-[8px] px-2 py-0.5 rounded-full uppercase tracking-wider border border-[#EF476F]/10">
+                        Cafe & Creative Space
+                      </span>
+                      <span className="bg-[#06D6A0]/10 text-[#073B4C] font-black text-[8px] px-2 py-0.5 rounded-full uppercase tracking-wider border border-[#06D6A0]/10">
+                        Reunion Venue
+                      </span>
+                    </div>
+                    <h4 className="text-base font-black text-[#073B4C] leading-tight uppercase italic group-hover/link:text-[#EF476F] transition-colors flex items-center gap-1.5">
+                      <MapPin size={16} className="text-[#EF476F]" strokeWidth={3} /> Milestone Star Cafe Bintaro
+                    </h4>
+                    <p className="text-[10px] font-bold text-[#073B4C]/70 mt-1 leading-relaxed">
+                      Jl. Camat Pd. Aren No.99, Pd. Jaya, Bintaro, Kec. Pd. Aren, Kota Tangerang Selatan, Banten 15229
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-slate-100 flex-wrap text-xs font-black text-[#073B4C]">
+                    <div className="flex items-center gap-1 text-[#FFD166] bg-[#073B4C] px-2 py-0.5 rounded-md">
+                      <span>⭐</span>
+                      <span className="text-white text-[9px]">4.8</span>
+                      <span className="text-white/50 text-[7px] font-bold">(258+)</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[#06D6A0] bg-[#073B4C] px-2 py-0.5 rounded-md">
+                      <span className="text-[9px] text-[#06D6A0] font-black">Rp</span>
+                      <span className="text-white text-[9px] font-black">35k - 75k</span>
+                    </div>
+                    <span className="text-[8px] text-[#EF476F] font-black uppercase tracking-widest flex items-center gap-1 animate-pulse ml-auto bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">
+                      📍 Buka maps
+                    </span>
+                  </div>
+                </a>
               </div>
-              <div className="flex-1 bg-white relative">
-                 {/* Simple Iframe Embed based on common pattern if possible, or link */}
-                 <iframe 
+
+              {/* Bottom part: Smaller Google Maps interactive iframe */}
+              <div className="bg-white rounded-[32px] overflow-hidden m-1.5 border-4 border-[#073B4C] min-h-[180px] relative flex-1">
+                <iframe 
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.918!2d106.712!3d-6.279!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69fa8946766d03%3A0xc6c4f03673ab1947!2sMilestone%20Cafe%20%26%20Creative%20Space!5e0!3m2!1sen!2sid!4v1715738000000!5m2!1sen!2sid" 
                   className="w-full h-full border-0 grayscale hover:grayscale-0 transition-all"
                   allowFullScreen
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                 ></iframe>
-                <div className="absolute bottom-4 right-4">
-                   <a 
-                    href="https://share.google/E9xALeH3GCWB7iqOs" 
+                <div className="absolute bottom-3 right-3">
+                  <a 
+                    href="https://maps.app.goo.gl/NinRKSfzcdA4sCdN7" 
                     target="_blank" 
                     rel="noreferrer"
-                    className="bg-[#EF476F] text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:scale-110 active:scale-95 transition-all border-2 border-[#073B4C]"
+                    className="bg-[#EF476F] text-white px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg hover:scale-110 active:scale-95 transition-all border-2 border-[#073B4C]"
                   >
-                    Buka Di Maps
+                    Buka Rute
                   </a>
                 </div>
               </div>
@@ -940,16 +1070,21 @@ export default function App() {
               <div className="divide-y-4 divide-[#073B4C]">
                 {[
                   { time: "12.30 - 13.45", title: "Registrasi", desc: "Datang lebih awal buat ambil merchandise seru dan photo booth bareng sob!", icon: "📝", color: "#FFD166" },
-                  { time: "14.00 - 14.10", title: "Pembukaan", desc: "Pembukaan resmi acara reuni perak oleh MC kece badai", icon: "📢", color: "#EF476F" },
-                  { time: "14.10 - 14.20", title: "Pemutaran Video Sekolah & Foto Guru", desc: "Nostalgia suasana SMAN 90 Jakarta jadul dan kenangan manis guru-guru tercinta", icon: "📹", color: "#118AB2" },
-                  { time: "14.20 - 14.35", title: "Sambutan Perwakilan Guru", desc: "Mendengar kembali nasihat hangat dan petuah bijak dari bapak/ibu guru kita", icon: "👨‍🏫", color: "#06D6A0" },
-                  { time: "14.35 - 14.45", title: "Simbolis Cindera Mata & Foto Bersama", desc: "Penyerahan tanda kasih alumni 2001 kepada guru-guru yang berjasa", icon: "🎁", color: "#EF476F" },
-                  { time: "14.45 - 14.55", title: "Pemutaran Video Kolase Angkatan 2001", desc: "Flashback masa-masa indah putih abu-abu, kumpul bersama kawan lama", icon: "🎬", color: "#FFD166" },
-                  { time: "14.55 - 15.05", title: "Sambutan Ketua Panitia & Foto Bersama", desc: "Sepatah dua patah kata terima kasih dari ketua panitia reuni", icon: "🎤", color: "#118AB2" },
-                  { time: "15.05 - 15.10", title: "Menyanyi Bersama Lagu Jaman Putih-Abu2", desc: "Sing along bareng lagu-lagu ngetren tahun 2000-an penanda masa sekolah", icon: "🎵", color: "#06D6A0" },
-                  { time: "15.10 - 15.30", title: "Coffee Break & Ishoma", desc: "Santai sejenak, ibadah sholat, nikmati camilan dan kopi hangat", icon: "☕", color: "#FFD166" },
-                  { time: "15.30 - 17.00", title: "Acara Inti", desc: "Kuis seru, games angkatan, pembagian doorprize, dan temu kangen bebas", icon: "🎉", color: "#EF476F" },
-                  { time: "17.00 - 17.10", title: "Pembagian Cinderamata Guru & Penutupan", desc: "Sesi penutup, doa bersama, pembagian bingkisan, dan salam-salaman hangat", icon: "✨", color: "#06D6A0" }
+                  { time: "13.00 - 13.45", title: "Presentasi pihak Sponsor", desc: "Dengerin sponsor dulu yuk sob!", icon: "📈", color: "#118AB2" },
+                  { time: "12.30 - 13.45", title: "Peserta masuk venue", desc: "Udah mau mulai acaranya, sob!", icon: "📢", color: "#EF476F" },
+                  { time: "14.00 - 14.10", title: "Pembukaan & Doa", desc: "Pembukaan resmi acara reuni perak oleh MC diiringin doa", icon: "✨", color: "#06D6A0" },
+                  { time: "14.10 - 14.20", title: "Pemutaran Video Sekolah & Guru", desc: "Nostalgia suasana jadul SMUN 90 dan kenangan bersama guru-guru tercinta", icon: "📹", color: "#FFD166" },
+                  { time: "14.20 - 14.35", title: "Sambutan Perwakilan Guru", desc: "Mendengar kembali nasihat hangat dari bapak Robert sebagai perwakilan guru", icon: "👨‍🏫", color: "#118AB2" },
+                  { time: "14.35 - 14.45", title: "Cindera Mata Guru & Foto Bersama", desc: "Penyerahan tanda kasih alumni 2001 kepada guru-guru yang berjasa", icon: "🎁", color: "#EF476F" },
+                  { time: "14.45 - 14.55", title: "Pemutaran Video Kolase Angkatan 2001", desc: "Flashback masa-masa indah putih abu-abu, kumpul bersama kawan lama", icon: "🎬", color: "#06D6A0" },
+                  { time: "14.55 - 15.00", title: "Sambutan Ketua Panitia & Wakil", desc: "Sepatah dua patah kata terima kasih dari ketua & wakil panitia reuni", icon: "🎤", color: "#FFD166" },
+                  { time: "15.00 - 15.05", title: "Foto bersama Guru dan alumni", desc: "Foto bersama Guru dan peserta reuni", icon: "📸", color: "#118AB2" },
+                  { time: "15.10 - 15.30", title: "Coffee Break & Ishoma", desc: "Santai sejenak, ibadah sholat, nikmati camilan dan kopi hangat", icon: "☕", color: "#EF476F" },
+                  { time: "15.35 - 16.00", title: "Quiz antar kelas", desc: "Pilih 3 orang perwakilan dari masing-masing kelas", icon: "🎲", color: "#06D6A0" },
+                  { time: "16.00 - 16.30", title: "Tebak Lagu/Pilih Lagu", desc: "Tebak dan nyanyi bareng lagu-lagu ngetren tahun 2000-an", icon: "🎵", color: "#FFD166" },
+                  { time: "16.30 - 17.00", title: "Games daya ingat dan kekompakan", desc: "Maju ke depan dan undi lagunya", icon: "🎉", color: "#118AB2" },
+                  { time: "17.10", title: "Penutup", desc: "Closing statement, Ramah Tamah dan Makan bersama", icon: "🍜", color: "#EF476F" },
+                  { time: "∞", title: "Selesai", desc: "Acara bebas", icon: "🫰", color: "#06D6A0" }
                 ].map((item, idx) => (
                   <div 
                     key={idx}
@@ -969,8 +1104,10 @@ export default function App() {
 
                     {/* Right side: Title & Description */}
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="md:hidden text-lg">{item.icon}</span>
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="md:hidden w-8 h-8 rounded-lg border-2 border-[#073B4C] flex items-center justify-center text-sm shrink-0 shadow-[1px_1px_0px_0px_#073B4C]" style={{ backgroundColor: item.color }}>
+                          {item.icon}
+                        </span>
                         <h4 className="text-lg md:text-xl font-black uppercase italic tracking-tight">{item.title}</h4>
                       </div>
                       <p className="text-xs md:text-sm font-bold opacity-75 leading-relaxed">{item.desc}</p>
@@ -1056,6 +1193,67 @@ export default function App() {
           </motion.div>
         )}
 
+        {/* Performance Section */}
+        {user && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-[#06D6A0] rounded-[40px] p-6 md:p-10 border-4 border-[#073B4C] shadow-[12px_12px_0px_0px_#073B4C] text-[#073B4C] hover:shadow-[16px_16px_0px_0px_#073B4C] transition-all relative overflow-hidden"
+          >
+            {/* Accent decoration */}
+            <div className="absolute top-0 right-0 p-10 opacity-10 rotate-12 pointer-events-none">
+              <Music size={200} fill="currentColor" />
+            </div>
+
+            <div className="relative z-10">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="bg-[#FFD166] p-4 rounded-2xl shadow-lg rotate-[-3deg] border-4 border-[#073B4C]">
+                    <Music size={40} className="text-[#073B4C]" fill="currentColor" />
+                  </div>
+                  <div>
+                    <h3 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter leading-none text-[#073B4C]">Performance</h3>
+                    <p className="text-[#073B4C]/80 font-black text-xs md:text-sm uppercase tracking-widest mt-1">Live Music & Reuni Nostalgia</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-6">
+                {/* Photo of Performer - Original size, like a card, no frame */}
+                <div className="w-full overflow-hidden rounded-[32px] bg-white shadow-[8px_8px_0px_0px_#073B4C]">
+                  <img 
+                    src="/milestone-band.jpeg" 
+                    alt="Milestone Band Performance" 
+                    referrerPolicy="no-referrer"
+                    className="w-full h-auto block object-contain"
+                    onError={(e) => {
+                      // Fallback to cozy cafe visual if the empty file isn't loaded/replaced
+                      e.currentTarget.src = "/src/assets/images/milestone_cafe_1780315968363.png";
+                    }}
+                  />
+                </div>
+
+                {/* Grouped badges beside/below image */}
+                <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-center mt-2">
+                  <span className="bg-[#EF476F] text-white text-[10px] font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full border-2 border-[#073B4C] shadow-[2px_2px_0_0_#073B4C]">
+                    LIVE BAND
+                  </span>
+                  <span className="bg-[#FFD166] text-[#073B4C] text-[10px] font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full border-2 border-[#073B4C] shadow-[2px_2px_0_0_#073B4C]">
+                    SMUN 90 JKT NOSTALGIA
+                  </span>
+                  <span className="bg-[#118AB2] text-white text-[10px] font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full border-2 border-[#073B4C] shadow-[2px_2px_0_0_#073B4C]">
+                    🎵 Pop, Rock, & Alternatif
+                  </span>
+                  <span className="bg-[#073B4C] text-white text-[10px] font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full border-2 border-[#073B4C] shadow-[2px_2px_0_0_#073B4C]">
+                    🎙️ Jamming Session
+                  </span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Sponsored By Section */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -1063,277 +1261,83 @@ export default function App() {
           viewport={{ once: true }}
           className="bg-white rounded-[40px] p-6 md:p-8 border-4 border-[#073B4C] shadow-[12px_12px_0px_0px_#06D6A0] flex flex-col items-center gap-6"
         >
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#073B4C]/40 italic">Gratefully Supported & Sponsored by</p>
+          <div className="text-center">
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#073B4C]/40 italic">Gratefully Supported & Sponsored by</p>
+            <p className="text-[9px] font-black text-[#EF476F] uppercase tracking-[0.2em] mt-1">Main sponsor</p>
+          </div>
           
           {/* First Row: Major Sponsors */}
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 w-full px-6">
-            <motion.a 
-              href="https://www.wardahbeauty.com"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-12 md:h-16 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/wardah.jpeg" 
-                alt="Wardah" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "WARDAH";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
-            <motion.a 
-              href="https://www.herbalife.com"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-16 md:h-20 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/herbalife.png" 
-                alt="Herbalife" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "HERBALIFE";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
-            <motion.a 
-              href="https://www.instagram.com/kayvillaresort"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-16 md:h-24 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/kay.png" 
-                alt="Kay" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "KAY";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
-            <motion.a 
-              href="https://www.rsbhaktiasih.com"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-16 md:h-24 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/rsbhaktiasih.png" 
-                alt="RS Bhakti Asih" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "RS BHAKTI ASIH";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
+            {[
+              { name: "RS BHAKTI ASIH", path: "/rsbhaktiasih.png", url: "https://www.rsbhaktiasih.com", style: "h-20 md:h-[120px]" },
+              { name: "WARDAH", path: "/wardah.jpeg", url: "https://www.wardahbeauty.com", style: "h-[60px] md:h-20" },
+              { name: "SPC", path: "/spc.png", url: "https://www.instagram.com/bimbelspc.id/?hl=en", style: "h-20 md:h-[120px]" },
+              { name: "HERBALIFE", path: "/herbalife.png", url: "https://www.herbalife.com", style: "h-20 md:h-[100px]" },
+              { name: "UNSIA", path: "/unsia.png", url: "https://unsia.ac.id", style: "h-20 md:h-[120px]" },
+              { name: "BESMAN", path: "/besman.jpeg", url: "https://besman.co.id", style: "h-[60px] md:h-20" }
+            ].map((sp) => (
+              <motion.a 
+                key={sp.name}
+                href={sp.url}
+                target="_blank"
+                rel="noreferrer"
+                whileHover={{ scale: 1.1 }}
+                className={`${sp.style} flex items-center justify-center transition-all shrink-0 cursor-pointer`}
+              >
+                <img 
+                  src={sp.path} 
+                  alt={sp.name} 
+                  className="max-h-full w-auto object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const label = document.createElement('span');
+                    label.className = "text-sm md:text-base font-black uppercase tracking-tighter text-[#073B4C]/45 italic border-2 border-dashed border-[#073B4C]/30 px-3 py-1.5 rounded-xl";
+                    label.innerText = sp.name;
+                    e.currentTarget.parentElement?.appendChild(label);
+                  }}
+                />
+              </motion.a>
+            ))}
           </div>
 
           {/* Divider line style */}
           <div className="w-full max-w-2xl border-t-2 border-[#073B4C]/10 my-1" />
 
+          <p className="text-[9px] font-black text-[#118AB2] uppercase tracking-[0.2em]">Co-Sponsor</p>
+
           {/* Supporting Sponsors (Wrapping flex grid) */}
           <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10 w-full px-6">
-            <motion.a 
-              href="https://besman.co.id"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-12 md:h-16 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/besman.jpeg" 
-                alt="Besman" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "BESMAN";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
-            <motion.a 
-              href="https://www.ancol.com"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-16 md:h-24 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/ancol.png" 
-                alt="Ancol" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "ANCOL";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
-            <motion.a 
-              href="https://www.instagram.com/tokotisa"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-16 md:h-24 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/tokotisa.png" 
-                alt="Toko Tisa" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "TOKO TISA";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
-            <motion.a 
-              href="https://www.stifiniknowyou.com"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-16 md:h-24 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/stifin.png" 
-                alt="STIFIn" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "STIFIN";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
-            <motion.a 
-              href="https://unsia.ac.id"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-16 md:h-24 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/unsia.png" 
-                alt="UNSIA" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "UNSIA";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
-            <motion.a 
-              href="https://www.instagram.com/gotogarut"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-14 md:h-20 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/gtg.png" 
-                alt="GTG" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "GTG";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
-            <motion.a 
-              href="https://www.instagram.com/oscarbakery888"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-16 md:h-22 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/oscar.png" 
-                alt="Oscar" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "OSCAR";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
-            <motion.a 
-              href="https://www.instagram.com/bimbelspc.id/?hl=en"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-16 md:h-24 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/spc.png" 
-                alt="SPC" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "SPC";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
-            <motion.a 
-              href="https://www.facebook.com/pages/BELAL%20Enterprise%20Australia/848631515000347"
-              target="_blank"
-              rel="noreferrer"
-              whileHover={{ scale: 1.1 }}
-              className="h-16 md:h-24 flex items-center justify-center transition-all shrink-0 cursor-pointer"
-            >
-              <img 
-                src="/belal.png" 
-                alt="BELAL" 
-                className="max-h-full w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const label = document.createElement('span');
-                  label.className = "text-xl font-black uppercase tracking-tighter text-[#073B4C]/30 italic";
-                  label.innerText = "BELAL";
-                  e.currentTarget.parentElement?.appendChild(label);
-                }}
-              />
-            </motion.a>
+            {[
+              { name: "ANCOL", path: "/ancol.png", url: "https://www.ancol.com", style: "h-12 md:h-18" },
+              { name: "KAY", path: "/kay.png", url: "https://www.instagram.com/kayvillaresort", style: "h-12 md:h-18" },
+              { name: "OSCAR", path: "/oscar.png", url: "https://www.instagram.com/oscarbakery888", style: "h-12 md:h-18" },
+              { name: "STIFIN", path: "/stifin.png", url: "https://www.stifiniknowyou.com", style: "h-12 md:h-18" },
+              { name: "TOKO TISA", path: "/tokotisa.png", url: "https://www.instagram.com/tokotisa", style: "h-12 md:h-18" },
+              { name: "GTG", path: "/gtg.png", url: "https://www.instagram.com/gotogarut", style: "h-10 md:h-16" },
+              { name: "BELAL", path: "/belal.png", url: "https://www.facebook.com/pages/BELAL%20Enterprise%20Australia/848631515000347", style: "h-12 md:h-18" }
+            ].map((sp) => (
+              <motion.a 
+                key={sp.name}
+                href={sp.url}
+                target="_blank"
+                rel="noreferrer"
+                whileHover={{ scale: 1.1 }}
+                className={`${sp.style} flex items-center justify-center transition-all shrink-0 cursor-pointer`}
+              >
+                <img 
+                  src={sp.path} 
+                  alt={sp.name} 
+                  className="max-h-full w-auto object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const label = document.createElement('span');
+                    label.className = "text-xs font-black uppercase tracking-tighter text-[#073B4C]/40 italic border border-dashed border-[#073B4C]/25 px-2 py-1 rounded-lg";
+                    label.innerText = sp.name;
+                    e.currentTarget.parentElement?.appendChild(label);
+                  }}
+                />
+              </motion.a>
+            ))}
           </div>
         </motion.div>
           </>
@@ -1475,6 +1479,53 @@ export default function App() {
                 >
                   Yuk, Login Sekarang!
                 </button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Café Full Resolution Popup Modal */}
+        <AnimatePresence>
+          {cafePopupImg && (
+            <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setCafePopupImg(null)}
+                className="absolute inset-0 bg-[#073B4C]/90 backdrop-blur-sm cursor-pointer"
+              />
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white rounded-[40px] border-4 border-[#073B4C] p-4 max-w-2xl w-full relative z-10 shadow-[12px_12px_0_0_#EF476F] flex flex-col gap-4 overflow-hidden"
+              >
+                <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
+                  <h3 className="text-sm font-black uppercase italic text-[#EF476F] tracking-tight flex items-center gap-2">
+                    📸 milestone cafe preview detail
+                  </h3>
+                  <button 
+                    onClick={() => setCafePopupImg(null)}
+                    className="font-black text-[#073B4C] hover:text-[#EF476F] text-lg cursor-pointer transition-colors border-none bg-transparent"
+                  >
+                    ✖
+                  </button>
+                </div>
+                
+                <div className="relative rounded-[20px] overflow-hidden border-2 border-[#073B4C] bg-slate-50 aspect-video flex items-center justify-center">
+                  <img 
+                    src={cafePopupImg} 
+                    alt="Detail Milestone Cafe Bintaro" 
+                    referrerPolicy="no-referrer"
+                    className="max-h-[60vh] max-w-full object-contain cursor-pointer"
+                    onClick={() => setCafePopupImg(null)}
+                  />
+                </div>
+                
+                <p className="text-center font-bold text-[10px] text-[#073B4C]/60 italic uppercase tracking-wider">
+                  Klik di luar atau tombol ✖ untuk menutup
+                </p>
               </motion.div>
             </div>
           )}

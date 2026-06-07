@@ -37,6 +37,7 @@ interface Feedback {
 }
 
 interface FeedbackPageProps {
+  key?: string;
   user: {
     id: string;
     name: string;
@@ -44,6 +45,7 @@ interface FeedbackPageProps {
     className: string;
   };
   onBack: () => void;
+  onAddFeedback: () => void;
 }
 
 // Available emojis for reaction
@@ -61,7 +63,7 @@ const REACTION_EMOJIS = [
   { key: 'pray', emoji: '🙏', label: 'Matur Nuwun' }
 ];
 
-export default function FeedbackPage({ user, onBack }: FeedbackPageProps) {
+export default function FeedbackPage({ user, onBack, onAddFeedback }: FeedbackPageProps) {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -321,21 +323,34 @@ export default function FeedbackPage({ user, onBack }: FeedbackPageProps) {
     <div className="w-full max-w-4xl mx-auto space-y-8 pb-12">
       
       {/* Header & Back Button */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onBack}
-          className="bg-white hover:bg-slate-50 text-[#073B4C] font-black py-3 px-6 rounded-2xl border-4 border-[#073B4C] shadow-[4px_4px_0_0_#EF476F] flex items-center gap-2 cursor-pointer transition-all uppercase text-xs tracking-widest"
-        >
-          <ArrowLeft size={16} strokeWidth={3} /> Kembali ke Beranda
-        </motion.button>
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-6">
+        <div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onBack}
+            className="bg-white hover:bg-slate-50 text-[#073B4C] font-black py-3 px-6 rounded-2xl border-4 border-[#073B4C] shadow-[4px_4px_0_0_#EF476F] flex items-center gap-2 cursor-pointer transition-all uppercase text-xs tracking-widest"
+          >
+            <ArrowLeft size={16} strokeWidth={3} /> Kembali ke Beranda
+          </motion.button>
+        </div>
         
-        <div className="text-right sm:text-right">
-          <span className="text-xs font-black uppercase tracking-widest text-[#073B4C]/50">Pojok Reuni</span>
-          <h2 className="text-3xl md:text-4xl font-black italic uppercase text-[#EF476F] tracking-tighter leading-none mt-1">
-            Pojok Cuap-Cuap Alumni
-          </h2>
+        <div className="flex flex-col items-start sm:items-end w-full sm:w-auto gap-4">
+          <div className="text-left sm:text-right">
+            <span className="text-xs font-black uppercase tracking-widest text-[#073B4C]/50">Pojok Reuni</span>
+            <h2 className="text-3xl md:text-4xl font-black italic uppercase text-[#EF476F] tracking-tighter leading-none mt-1">
+              Pojok Cuap-Cuap Alumni
+            </h2>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onAddFeedback}
+            className="bg-[#06D6A0] hover:bg-[#05b88a] text-[#073B4C] font-black py-3 px-6 rounded-2xl border-4 border-[#073B4C] shadow-[4px_4px_0_0_#073B4C] flex items-center gap-2 cursor-pointer transition-all uppercase text-xs tracking-widest w-full sm:w-auto text-center justify-center"
+          >
+            <MessageSquare size={16} strokeWidth={3} /> Tulis Pesan Kesan
+          </motion.button>
         </div>
       </div>
 
@@ -368,7 +383,7 @@ export default function FeedbackPage({ user, onBack }: FeedbackPageProps) {
             Jadilah yang pertama mengirimkan kesan, pesan, saran atau sapaan ke sobat alumni yang lain di Pojok Cuap-Cuap!
           </p>
           <button 
-            onClick={onBack}
+            onClick={onAddFeedback}
             className="mt-6 bg-[#06D6A0] hover:bg-[#05b88a] text-[#073B4C] font-black py-3 px-6 rounded-2xl border-4 border-[#073B4C] shadow-[4px_4px_0_0_#073B4C] active:translate-y-1 active:shadow-none transition-all uppercase text-xs tracking-widest text-center"
           >
             Kirim Cuap-Cuap Pertama Sekarang!
