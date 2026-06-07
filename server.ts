@@ -18,16 +18,24 @@ async function startServer() {
 
   app.use(express.json());
 
-  console.log("Initializing Supabase...");
-  // Supabase Configuration
-  const supabaseUrl = process.env.SUPABASE_URL || "https://whiyuofnjrnqnhinyfyn.supabase.co";
-  const supabaseKey = process.env.SUPABASE_KEY || "sb_publishable_0baiYB7gQHC2F60uFzp9lg_C7liBcZM";
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  console.log("Supabase client created.");
+  console.log("Setting up Supabase client query helper...");
+  let supabaseClient: any = null;
+  function getSupabase() {
+    if (!supabaseClient) {
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_KEY;
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error("SUPABASE_URL & SUPABASE_KEY environment variables are missing!");
+      }
+      supabaseClient = createClient(supabaseUrl, supabaseKey);
+    }
+    return supabaseClient;
+  }
 
   // Get Class Names Endpoint
   app.get("/api/classes", async (req, res) => {
     try {
+      const supabase = getSupabase();
       // Fetch unique classes from Supabase
       const { data, error } = await supabase
         .from('participants')
@@ -47,6 +55,7 @@ async function startServer() {
   // Get Configurations Endpoint
   app.get("/api/config", async (req, res) => {
     try {
+      const supabase = getSupabase();
       const { data, error } = await supabase
         .from('configs')
         .select('key, val');
@@ -72,6 +81,7 @@ async function startServer() {
   // Get Alumni Statistics Endpoint
   app.get("/api/stats", async (req, res) => {
     try {
+      const supabase = getSupabase();
       const { data: participants, error } = await supabase
         .from('participants')
         .select('id, payment_checklist, check_in');
@@ -121,6 +131,7 @@ async function startServer() {
   // Get feedbacks (joining elements and reactions cleanly on server side)
   app.get("/api/feedbacks", async (req, res) => {
     try {
+      const supabase = getSupabase();
       // Fetch all participants to map names and classes
       const { data: participants, error: pError } = await supabase
         .from('participants')
@@ -223,6 +234,7 @@ async function startServer() {
   // Post new feedback or reply
   app.post("/api/feedback", async (req, res) => {
     try {
+      const supabase = getSupabase();
       const { participant_id, feedback, parent_id } = req.body;
       if (!participant_id || !feedback) {
         return res.status(400).json({ error: "Saran dan identitas harus diisi, sob!" });
@@ -272,6 +284,7 @@ async function startServer() {
   // Add or toggle feedback reaction
   app.post("/api/feedback-reaction", async (req, res) => {
     try {
+      const supabase = getSupabase();
       const { participant_id, feedback_id, reaction } = req.body;
       if (!participant_id || !feedback_id || !reaction) {
         return res.status(400).json({ error: "Data reaksi kurang lengkap nih, sob!" });
@@ -315,6 +328,7 @@ async function startServer() {
   // Get User Status Endpoint (for realtime check-in detection)
   app.get("/api/status/:id", async (req, res) => {
     try {
+      const supabase = getSupabase();
       const { id } = req.params;
       
       const { data: user, error } = await supabase
@@ -342,6 +356,7 @@ async function startServer() {
   // Login Endpoint
   app.post("/api/login", async (req, res) => {
     try {
+      const supabase = getSupabase();
       const { phone, className } = req.body;
 
       if (!phone || !className) {
