@@ -2,6 +2,8 @@
 
 Welcome to the official full-stack web application of the **Silver Reunion 90 SMAN 90 Jakarta** (Reuni Perak SMUN 90 JKT)! This application serves as a central digital guest book, attendance manager, live countdown, and interactive digital forum for all alumni from the graduating classes of 1998 - 2001.
 
+![Silver Reunion Dashboard Mockup](public/demo.png)
+
 Live Preview URL: [Development App](https://ais-dev-zskczonhbtabw6hiz6xswe-339082861613.asia-southeast1.run.app) | [Shared App](https://ais-pre-zskczonhbtabw6hiz6xswe-339082861613.asia-southeast1.run.app)
 
 ---
